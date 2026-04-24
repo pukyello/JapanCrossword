@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Японский кроссворд</title>
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(145deg, #f6f9fc 0%, #e9f0f5 100%);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #1e3c72;
+            margin-bottom: 20px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        select, button {
+            padding: 10px 15px;
+            font-size: 15px;
+            border: none;
+            border-radius: 40px;
+            background: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(30,60,114,0.1);
+        }
+
+        select {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="%231e3c72" d="M7 10l5 5 5-5z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 16px;
+            appearance: none;
+            padding-right: 30px;
+        }
+
+        button { background: #1e3c72; color: white; min-width: 100px; }
+        button:hover { background: #2a5298; transform: translateY(-2px); box-shadow: 0 8px 16px rgba(30,60,114,0.2); }
+        button:active { transform: translateY(0); }
+        button:disabled { background: #a0b4d4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .grid-container {
+            display: inline-grid;
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            border: 1px solid rgba(30,60,114,0.15);
+        }
+
+        .grid-cell { display: flex; align-items: center; justify-content: center; font-weight: bold; user-select: none; }
+        .corner-cell { background: #d0dbe8; border-right: 2px solid #1e3c72; border-bottom: 2px solid #1e3c72; border-radius: 12px 0 0 0; }
+        .top-clue { background: #eef3f9; color: #1e3c72; font-size: 15px; border-bottom: 2px solid #1e3c72; align-items: flex-end; padding-bottom: 6px; line-height: 1.3; text-align: center; }
+        .left-clue { background: #eef3f9; color: #1e3c72; font-size: 15px; border-right: 2px solid #1e3c72; justify-content: flex-end; padding-right: 10px; }
+        
+        .play-cell { background: #ffffff; border: 1px solid #b0c4de; cursor: pointer; font-size: 22px; font-weight: bold; }
+        .cell-empty { background: #ffffff; color: #333; }
+        .cell-black { background: #1e3c72; color: white; border-color: #0f2a4a; }
+        .cell-crossed { background: #ffffff; color: #d32f2f; font-size: 28px; line-height: 1; }
+        .cell-error { background-color: #ffcccc; border: 2px solid #ff0000; box-shadow: inset 0 0 0 1px #ff0000; }
+
+        #message { margin-top: 25px; font-size: 22px; font-weight: 700; min-height: 50px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <h1>Японский Кроссворд</h1>
+    
+    <div class="controls">
+        <select id="levelSelect" onchange="loadLevel()">
+            <option value="0">Смайлик (5x5)</option>
+            <option value="1">Уточка (10x10)</option>
+        </select>
+        <button id="undoBtn" onclick="commandManager.undo()">↩ Отменить</button>
+        <button id="redoBtn" onclick="commandManager.redo()">↪ Вернуть</button>
+        <button onclick="checkWin()">Проверить</button>
+        <button onclick="resetLevel()">Очистить</button>
+    </div>
+
+    <div id="gameContainer"></div>
+    <div id="message"></div>
+
+<script>
+// ==========================================
+// ПАТТЕРН 2: COMPOSITE (Компоновщик)
+// ==========================================
+class GridComponent {
+    accept(visitor) { throw new Error("Метод accept() должен быть реализован"); }
+}
+
+class Cell extends GridComponent {
+    constructor(row, col) {
+        super();
+        this.row = row;
+        this.col = col;
+        this.state = 0; // 0 - пусто, 1 - закрашено, 2 - крестик
+        this.domElement = null;
+    }
+
+    accept(visitor) { visitor.visitCell(this); }
+
+    setState(newState) {
+        this.state = newState;
+        this.updateDOM();
+    }
+
+    updateDOM() {
+        if (!this.domElement) return;
+        this.domElement.className = 'grid-cell play-cell';
+        this.domElement.innerText = '';
+        if (this.state === 1) this.domElement.classList.add('cell-black');
+        else if (this.state === 2) { this.domElement.classList.add('cell-crossed'); this.domElement.innerText = '✕'; }
+        else this.domElement.classList.add('cell-empty');
+    }
+    
+    clearError() { if (this.domElement) this.domElement.classList.remove('cell-error'); }
+    setError() { if (this.domElement) this.domElement.classList.add('cell-error'); }
+}
+
+class GridGroup extends GridComponent {
+    constructor() { super(); this.children = []; }
+    add(component) { this.children.push(component); }
+    accept(visitor) {
+        visitor.visitGroup(this);
+        for (let child of this.children) child.accept(visitor);
+    }
+}
+
+// ==========================================
+// ПАТТЕРН 1: COMMAND (Команда)
+// ==========================================
+class Command {
+    execute() {}
+    undo() {}
+}
+
+class ToggleCellCommand extends Command {
+    constructor(cell, clickType) {
+        super();
+        this.cell = cell;
+        this.oldState = cell.state;
+        if (clickType === 0) this.newState = (this.oldState === 1) ? 0 : 1;
+        else if (clickType === 2) this.newState = (this.oldState === 2) ? 0 : 2;
+    }
+    execute() { this.cell.setState(this.newState); }
+    undo() { this.cell.setState(this.oldState); }
+}
+
+class CommandManager {
+    constructor() { this.undoStack = []; this.redoStack = []; }
+    executeCommand(command) {
+        command.execute();
+        this.undoStack.push(command);
+        this.redoStack = [];
+        this.updateButtons();
+    }
+    undo() {
+        if (this.undoStack.length === 0) return;
+        const command = this.undoStack.pop();
+        command.undo();
+        this.redoStack.push(command);
+        this.updateButtons();
+    }
+    redo() {
+        if (this.redoStack.length === 0) return;
+        const command = this.redoStack.pop();
+        command.execute();
+        this.undoStack.push(command);
+        this.updateButtons();
+    }
+    clear() { this.undoStack = []; this.redoStack = []; this.updateButtons(); }
+    updateButtons() {
+        document.getElementById('undoBtn').disabled = this.undoStack.length === 0;
+        document.getElementById('redoBtn').disabled = this.redoStack.length === 0;
+    }
+}
+
+// ==========================================
+// ПАТТЕРН 3: VISITOR (Посетитель)
+// ==========================================
+class Visitor {
+    visitCell(cell) {}
+    visitGroup(group) {}
+}
+
+class ClearErrorsVisitor extends Visitor {
+    visitCell(cell) { cell.clearError(); }
+}
+
+class WinCheckVisitor extends Visitor {
+    constructor(levelData) {
+        super();
+        this.levelData = levelData;
+        this.extraBlacks = 0;   // Лишние закрашенные (ошибки)
+        this.missingBlacks = 0; // Недокрашенные
+    }
+
+    visitCell(cell) {
+        const expected = this.levelData[cell.row][cell.col];
+        if (expected === 0 && cell.state === 1) {
+            this.extraBlacks++;
+            cell.setError();
+        } else if (expected === 1 && cell.state !== 1) {
+            this.missingBlacks++;
+        }
+    }
+}
+
+// ==========================================
+// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И ДАННЫЕ ИГРЫ
+// ==========================================
+let currentLevelData = [];
+let size = 0;
+let rootBoardGroup = new GridGroup();
+let commandManager = new CommandManager();
+
+const levels = [
+    {
+        size: 5,
+        data: [
+            [0,1,0,1,0],
+            [0,1,0,1,0],
+            [0,0,0,0,0],
+            [1,0,0,0,1],
+            [0,1,1,1,0]
+        ]
+    },
+    {
+        size: 10,
+        data: [
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,1,1,0,0,0,0],
+            [0,0,0,1,1,0,1,0,0,0],
+            [0,0,1,1,1,1,1,0,0,0],
+            [0,0,0,0,1,1,0,0,0,0],
+            [0,0,1,1,1,1,1,1,0,0],
+            [0,1,1,1,1,1,1,1,1,0],
+            [0,1,1,1,1,1,1,1,1,0],
+            [0,0,1,1,1,1,1,1,0,0],
+            [0,0,0,1,1,1,1,0,0,0]
+        ]
+    }
+];
+
+function loadLevel() {
+    let sel = document.getElementById("levelSelect");
+    let lvl = levels[sel.value];
+    size = lvl.size;
+    currentLevelData = lvl.data;
+    
+    commandManager.clear();
+    rootBoardGroup = new GridGroup();
+    
+    for(let i=0; i<size; i++) {
+        let rowGroup = new GridGroup();
+        for(let j=0; j<size; j++) rowGroup.add(new Cell(i, j));
+        rootBoardGroup.add(rowGroup);
+    }
+
+    document.getElementById("message").innerText = "";
+    drawGrid(); 
+}
+
+function drawGrid() {
+    const container = document.getElementById("gameContainer");
+    container.innerHTML = '';
+    
+    const grid = document.createElement('div');
+    grid.className = 'grid-container';
+    grid.style.gridTemplateColumns = `90px repeat(${size}, 40px)`;
+    grid.style.gridTemplateRows = `70px repeat(${size}, 40px)`;
+
+    const corner = document.createElement('div');
+    corner.className = 'grid-cell corner-cell';
+    grid.appendChild(corner);
+    
+    let topClues = [];
+    for(let j=0; j<size; j++) {
+        let col = []; let count = 0;
+        for(let i=0; i<size; i++) {
+            if(currentLevelData[i][j] === 1) count++;
+            else if(count > 0) { col.push(count); count = 0; }
+        }
+        if(count > 0) col.push(count);
+        if(col.length === 0) col.push(0);
+        topClues.push(col);
+    }
+    
+    for(let j=0; j<size; j++) {
+        const clueDiv = document.createElement('div');
+        clueDiv.className = 'grid-cell top-clue';
+        clueDiv.innerHTML = topClues[j].join('<br>');
+        grid.appendChild(clueDiv);
+    }
+    
+    for(let i=0; i<size; i++) {
+        let rowClues = []; let count = 0;
+        for(let j=0; j<size; j++) {
+            if(currentLevelData[i][j] === 1) count++;
+            else if(count > 0) { rowClues.push(count); count = 0; }
+        }
+        if(count > 0) rowClues.push(count);
+        if(rowClues.length === 0) rowClues.push(0);
+        
+        const leftDiv = document.createElement('div');
+        leftDiv.className = 'grid-cell left-clue';
+        leftDiv.textContent = rowClues.join(' ');
+        grid.appendChild(leftDiv);
+        
+        const rowGroup = rootBoardGroup.children[i];
+        for(let j=0; j<size; j++) {
+            const cellDom = document.createElement('div');
+            cellDom.className = `grid-cell play-cell cell-empty`;
+            
+            const logicalCell = rowGroup.children[j];
+            logicalCell.domElement = cellDom;
+            logicalCell.updateDOM(); 
+            
+            cellDom.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                const clearVisitor = new ClearErrorsVisitor();
+                rootBoardGroup.accept(clearVisitor);
+                document.getElementById("message").innerText = "";
+                
+                const command = new ToggleCellCommand(logicalCell, e.button);
+                commandManager.executeCommand(command);
+            });
+            
+            cellDom.addEventListener('contextmenu', (e) => e.preventDefault());
+            grid.appendChild(cellDom);
+        }
+    }
+    container.appendChild(grid);
+}
+
+function checkWin() {
+    const clearVisitor = new ClearErrorsVisitor();
+    rootBoardGroup.accept(clearVisitor);
+    
+    const checkVisitor = new WinCheckVisitor(currentLevelData);
+    rootBoardGroup.accept(checkVisitor);
+    
+    const msg = document.getElementById("message");
+    
+    if (checkVisitor.extraBlacks > 0) {
+        msg.innerText = `Найдено ${checkVisitor.extraBlacks} лишних клеток. Исправьте подсвеченные ошибки.`;
+        msg.style.color = "#c62828";
+    } else if (checkVisitor.missingBlacks > 0) {
+        msg.innerText = "Ошибок нет, но кроссворд ещё не разгадан до конца!";
+        msg.style.color = "#1e3c72";
+    } else {
+        msg.innerText = "Поздравляю! Вы полностью разгадали кроссворд!";
+        msg.style.color = "#2e7d32";
+    }
+}
+
+function resetLevel() { loadLevel(); }
+window.onload = function() { loadLevel(); }
+</script>
+</body>
+</html>
