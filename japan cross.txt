@@ -5,379 +5,732 @@
     <title>Японский кроссворд</title>
     <style>
         * { box-sizing: border-box; }
-
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
             background: linear-gradient(145deg, #f6f9fc 0%, #e9f0f5 100%);
-            min-height: 100vh;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
+            min-height: 100vh; margin: 0; display: flex; flex-direction: column; align-items: center; padding: 20px;
+            user-select: none;
         }
-
-        h1 {
-            color: #1e3c72;
-            margin-bottom: 20px;
-            font-weight: 500;
-            letter-spacing: 1px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        select, button {
-            padding: 10px 15px;
-            font-size: 15px;
-            border: none;
-            border-radius: 40px;
-            background: white;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            border: 1px solid rgba(30,60,114,0.1);
-        }
-
-        select {
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="%231e3c72" d="M7 10l5 5 5-5z"/></svg>');
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            background-size: 16px;
-            appearance: none;
-            padding-right: 30px;
-        }
-
-        button { background: #1e3c72; color: white; min-width: 100px; }
-        button:hover { background: #2a5298; transform: translateY(-2px); box-shadow: 0 8px 16px rgba(30,60,114,0.2); }
-        button:active { transform: translateY(0); }
-        button:disabled { background: #a0b4d4; cursor: not-allowed; transform: none; box-shadow: none; }
-
-        .grid-container {
-            display: inline-grid;
-            background: #ffffff;
-            border-radius: 20px;
-            padding: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            border: 1px solid rgba(30,60,114,0.15);
-        }
-
-        .grid-cell { display: flex; align-items: center; justify-content: center; font-weight: bold; user-select: none; }
-        .corner-cell { background: #d0dbe8; border-right: 2px solid #1e3c72; border-bottom: 2px solid #1e3c72; border-radius: 12px 0 0 0; }
-        .top-clue { background: #eef3f9; color: #1e3c72; font-size: 15px; border-bottom: 2px solid #1e3c72; align-items: flex-end; padding-bottom: 6px; line-height: 1.3; text-align: center; }
-        .left-clue { background: #eef3f9; color: #1e3c72; font-size: 15px; border-right: 2px solid #1e3c72; justify-content: flex-end; padding-right: 10px; }
+        h1 { color: #1e3c72; margin-bottom: 20px; font-weight: 500; }
         
-        .play-cell { background: #ffffff; border: 1px solid #b0c4de; cursor: pointer; font-size: 22px; font-weight: bold; }
-        .cell-empty { background: #ffffff; color: #333; }
-        .cell-black { background: #1e3c72; color: white; border-color: #0f2a4a; }
-        .cell-crossed { background: #ffffff; color: #d32f2f; font-size: 28px; line-height: 1; }
-        .cell-error { background-color: #ffcccc; border: 2px solid #ff0000; box-shadow: inset 0 0 0 1px #ff0000; }
+        .controls, .bottom-controls, .editor-controls {
+            display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center;
+            background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+        .controls { margin-bottom: 20px; }
+        .bottom-controls { margin-top: 15px; }
+        .editor-controls { background: #fff3e0; display: none; margin-bottom: 20px; }
 
-        #message { margin-top: 25px; font-size: 22px; font-weight: 700; min-height: 50px; text-align: center; }
+        .divider { width: 2px; height: 30px; background: #e0e0e0; margin: 0 5px; }
+        .hotkeys-info { font-size: 13px; color: #78909c; font-weight: 600; margin-left: 10px; }
+
+        select, button, input[type="file"], input[type="text"] {
+            padding: 8px 15px; font-size: 14px; border: none; border-radius: 20px;
+            background: #f0f4f8; cursor: pointer; font-weight: 600; transition: all 0.2s ease;
+            border: 1px solid rgba(30,60,114,0.1); outline: none;
+        }
+        input[type="text"] { background: white; cursor: text; }
+        button { background: #1e3c72; color: white; }
+        button:hover:not(:disabled) { background: #2a5298; transform: translateY(-2px); }
+        button:disabled { background: #a0b4d4; cursor: not-allowed; opacity: 0.7; transform: none; }
+        
+        .btn-action { background: #2e7d32; }
+        .btn-save { background: #0288d1; }
+        .btn-save:hover:not(:disabled) { background: #0277bd; }
+        .btn-editor { background: #e65100; }
+        .btn-danger { background: #c62828; }
+        .btn-danger:hover:not(:disabled) { background: #b71c1c; }
+        .btn-hint { background: #fbc02d; color: #333; }
+        .btn-hint:hover:not(:disabled) { background: #f9a825; color: black; }
+
+        .grid-container { display: inline-grid; background: #ffffff; border-radius: 20px; padding: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); transition: all 0.3s; }
+        .grid-cell { display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .corner-cell { background: #d0dbe8; border-right: 2px solid #1e3c72; border-bottom: 2px solid #1e3c72; border-radius: 12px 0 0 0; }
+        .top-clue { background: #eef3f9; color: #1e3c72; font-size: 14px; border-bottom: 2px solid #1e3c72; padding-bottom: 4px; transition: all 0.3s; }
+        .left-clue { background: #eef3f9; color: #1e3c72; font-size: 14px; border-right: 2px solid #1e3c72; justify-content: flex-end; padding-right: 10px; transition: all 0.3s; }
+        
+        /* Изменили стили для зачеркивания, чтобы они применялись к <span> */
+        .clue-done { color: #90a4ae; text-decoration: line-through; opacity: 0.5; }
+
+        .play-cell { background: #ffffff; border: 1px solid #b0c4de; cursor: pointer; font-size: 20px; font-weight: bold; transition: background-color 0.1s; }
+        .cell-black { background: #1e3c72; color: white; border-color: #0f2a4a; }
+        .cell-crossed { background: #ffffff; color: #d32f2f; }
+        .cell-error { background-color: #ffcccc; box-shadow: inset 0 0 0 2px #ff0000; }
+        .cell-editor-draw { background: #e65100; border-color: #bf360c; }
+        .cell-hinted { box-shadow: inset 0 0 10px #fbc02d; border-color: #fbc02d; z-index: 10; }
+
+        #message { margin-top: 20px; font-size: 20px; font-weight: 700; min-height: 30px; text-align: center; }
+        
+        .footer-panel { display: flex; gap: 30px; align-items: center; margin-top: 15px; }
+        .timer-box { font-size: 20px; font-weight: bold; background: white; padding: 10px 20px; border-radius: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+        .current-time { color: #d32f2f; }
+        .best-time { color: #2e7d32; }
+
+        input[type="file"] { display: none; }
+        .file-label { background: #455a64; color: white; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: 600;}
     </style>
 </head>
 <body>
 
     <h1>Японский Кроссворд</h1>
-    
-    <div class="controls">
-        <select id="levelSelect" onchange="loadLevel()">
-            <option value="0">Смайлик (5x5)</option>
-            <option value="1">Уточка (10x10)</option>
+
+    <div class="controls" id="playControls">
+        <select id="levelSelect"></select>
+        <button class="btn-danger" id="deleteLvlBtn" disabled>Удалить</button>
+        <div class="divider"></div>
+        <button class="btn-save" id="saveProgressBtn">💾 Сохранить</button>
+        <button class="btn-hint" id="hintBtn">💡 Подсказки: 3</button>
+        <button class="btn-action" id="checkBtn">Проверить</button>
+        <button id="resetBtn">Очистить поле</button>
+    </div>
+
+    <div class="editor-controls" id="editorControls">
+        <span>Размер:</span>
+        <select id="editorSize">
+            <option value="5">5x5</option>
+            <option value="10">10x10</option>
+            <option value="15">15x15</option>
         </select>
-        <button id="undoBtn" onclick="commandManager.undo()">↩ Отменить</button>
-        <button id="redoBtn" onclick="commandManager.redo()">↪ Вернуть</button>
-        <button onclick="checkWin()">Проверить</button>
-        <button onclick="resetLevel()">Очистить</button>
+        <button class="btn-action" id="createBlankBtn">Создать сетку</button>
+        <input type="text" id="customLevelName" placeholder="Название уровня...">
+        <button class="btn-editor" id="saveCustomLvlBtn">Сохранить</button>
+        <button id="exitEditorBtn">Выйти в игру</button>
     </div>
 
     <div id="gameContainer"></div>
     <div id="message"></div>
 
+    <div class="footer-panel" id="footerPanel">
+        <div class="timer-box current-time" id="timerDisplay">Время: 00:00</div>
+        <div class="timer-box best-time" id="bestTimeDisplay">Лучшее: --:--</div>
+    </div>
+
+    <div class="bottom-controls" id="bottomControls">
+        <button class="btn-editor" id="toggleEditorBtn">✏️ Редактор</button>
+        <div class="divider"></div>
+        <label class="file-label">📥 Импорт JSON <input type="file" id="importJsonFile" accept=".json"></label>
+        <button id="exportJsonBtn">📤 Экспорт JSON</button>
+        <div class="divider"></div>
+        <span class="hotkeys-info">Отмена: Ctrl+Z | Повтор: Ctrl+Y</span>
+    </div>
+
 <script>
-// ==========================================
-// ПАТТЕРН 2: COMPOSITE (Компоновщик)
-// ==========================================
-class GridComponent {
-    accept(visitor) { throw new Error("Метод accept() должен быть реализован"); }
-}
-
+/** ==========================================
+ * 1. CORE (ЯДРО БИЗНЕС-ЛОГИКИ)
+ * ========================================== */
+class GridComponent { accept(visitor) { throw new Error("Method not implemented"); } }
 class Cell extends GridComponent {
-    constructor(row, col) {
-        super();
-        this.row = row;
-        this.col = col;
-        this.state = 0; // 0 - пусто, 1 - закрашено, 2 - крестик
-        this.domElement = null;
-    }
-
+    constructor(row, col) { super(); this.row = row; this.col = col; this.state = 0; }
     accept(visitor) { visitor.visitCell(this); }
-
-    setState(newState) {
-        this.state = newState;
-        this.updateDOM();
-    }
-
-    updateDOM() {
-        if (!this.domElement) return;
-        this.domElement.className = 'grid-cell play-cell';
-        this.domElement.innerText = '';
-        if (this.state === 1) this.domElement.classList.add('cell-black');
-        else if (this.state === 2) { this.domElement.classList.add('cell-crossed'); this.domElement.innerText = '✕'; }
-        else this.domElement.classList.add('cell-empty');
-    }
-    
-    clearError() { if (this.domElement) this.domElement.classList.remove('cell-error'); }
-    setError() { if (this.domElement) this.domElement.classList.add('cell-error'); }
+    setState(newState) { this.state = newState; }
 }
-
 class GridGroup extends GridComponent {
     constructor() { super(); this.children = []; }
     add(component) { this.children.push(component); }
-    accept(visitor) {
-        visitor.visitGroup(this);
-        for (let child of this.children) child.accept(visitor);
-    }
+    accept(visitor) { visitor.visitGroup(this); for (let child of this.children) child.accept(visitor); }
 }
 
-// ==========================================
-// ПАТТЕРН 1: COMMAND (Команда)
-// ==========================================
-class Command {
-    execute() {}
-    undo() {}
-}
-
-class ToggleCellCommand extends Command {
-    constructor(cell, clickType) {
-        super();
-        this.cell = cell;
-        this.oldState = cell.state;
-        if (clickType === 0) this.newState = (this.oldState === 1) ? 0 : 1;
-        else if (clickType === 2) this.newState = (this.oldState === 2) ? 0 : 2;
-    }
+class Command { execute() {} undo() {} }
+class SetCellStateCommand extends Command {
+    constructor(cell, newState) { super(); this.cell = cell; this.oldState = cell.state; this.newState = newState; }
     execute() { this.cell.setState(this.newState); }
     undo() { this.cell.setState(this.oldState); }
+}
+class MacroCommand extends Command {
+    constructor() { super(); this.commands = []; }
+    add(cmd) { this.commands.push(cmd); return this; }
+    execute() { this.commands.forEach(c => c.execute()); }
+    undo() { for(let i = this.commands.length - 1; i >= 0; i--) this.commands[i].undo(); }
 }
 
 class CommandManager {
     constructor() { this.undoStack = []; this.redoStack = []; }
-    executeCommand(command) {
-        command.execute();
-        this.undoStack.push(command);
-        this.redoStack = [];
-        this.updateButtons();
-    }
-    undo() {
-        if (this.undoStack.length === 0) return;
-        const command = this.undoStack.pop();
-        command.undo();
-        this.redoStack.push(command);
-        this.updateButtons();
-    }
-    redo() {
-        if (this.redoStack.length === 0) return;
-        const command = this.redoStack.pop();
-        command.execute();
-        this.undoStack.push(command);
-        this.updateButtons();
-    }
-    clear() { this.undoStack = []; this.redoStack = []; this.updateButtons(); }
-    updateButtons() {
-        document.getElementById('undoBtn').disabled = this.undoStack.length === 0;
-        document.getElementById('redoBtn').disabled = this.redoStack.length === 0;
-    }
+    pushMacro(macro) { this.undoStack.push(macro); this.redoStack = []; }
+    undo() { if (!this.undoStack.length) return null; const cmd = this.undoStack.pop(); cmd.undo(); this.redoStack.push(cmd); return cmd; }
+    redo() { if (!this.redoStack.length) return null; const cmd = this.redoStack.pop(); cmd.execute(); this.undoStack.push(cmd); return cmd; }
+    clear() { this.undoStack = []; this.redoStack = []; }
 }
 
-// ==========================================
-// ПАТТЕРН 3: VISITOR (Посетитель)
-// ==========================================
-class Visitor {
-    visitCell(cell) {}
-    visitGroup(group) {}
-}
-
-class ClearErrorsVisitor extends Visitor {
-    visitCell(cell) { cell.clearError(); }
-}
-
+class Visitor { visitCell(cell) {} visitGroup(group) {} }
 class WinCheckVisitor extends Visitor {
-    constructor(levelData) {
-        super();
-        this.levelData = levelData;
-        this.extraBlacks = 0;   // Лишние закрашенные (ошибки)
-        this.missingBlacks = 0; // Недокрашенные
-    }
-
+    constructor(levelData) { super(); this.levelData = levelData; this.errors = []; this.missing = 0; }
     visitCell(cell) {
         const expected = this.levelData[cell.row][cell.col];
-        if (expected === 0 && cell.state === 1) {
-            this.extraBlacks++;
-            cell.setError();
-        } else if (expected === 1 && cell.state !== 1) {
-            this.missingBlacks++;
+        if (expected === 0 && cell.state === 1) this.errors.push({row: cell.row, col: cell.col});
+        else if (expected === 1 && cell.state !== 1) this.missing++;
+    }
+}
+class ExtractStateVisitor extends Visitor {
+    constructor() { super(); this.stateMatrix = []; this.currentRow = []; }
+    visitCell(cell) { this.currentRow.push(cell.state); }
+    visitGroup(group) { if (this.currentRow.length > 0) { this.stateMatrix.push([...this.currentRow]); this.currentRow = []; } }
+    getState() { if (this.currentRow.length > 0) this.stateMatrix.push([...this.currentRow]); return this.stateMatrix; }
+}
+
+class GameCore {
+    constructor() {
+        this.rootGroup = new GridGroup(); this.cmdManager = new CommandManager();
+        this.currentLevel = null; this.size = 0; this.timeSeconds = 0;
+        this.isEditorMode = false; this.isWon = false;
+    }
+    loadLevel(levelObj, savedState = null, savedTime = 0) {
+        this.currentLevel = levelObj; this.size = levelObj.size; this.isEditorMode = false; this.isWon = false;
+        this.cmdManager.clear(); this.timeSeconds = savedTime; this.rootGroup = new GridGroup();
+        for(let i=0; i<this.size; i++) {
+            let row = new GridGroup();
+            for(let j=0; j<this.size; j++) {
+                let cell = new Cell(i, j);
+                if (savedState) cell.setState(savedState[i][j]);
+                row.add(cell);
+            }
+            this.rootGroup.add(row);
         }
+    }
+    initEditor(size) {
+        this.isEditorMode = true; this.size = size; this.isWon = false; this.rootGroup = new GridGroup(); this.cmdManager.clear();
+        for(let i=0; i<size; i++) { let row = new GridGroup(); for(let j=0; j<size; j++) row.add(new Cell(i, j)); this.rootGroup.add(row); }
+    }
+    getCell(r, c) { return this.rootGroup.children[r].children[c]; }
+    
+    getHintableCells() {
+        if(this.isEditorMode) return [];
+        let cells = [];
+        for(let r=0; r<this.size; r++) {
+            for(let c=0; c<this.size; c++) {
+                let exp = this.currentLevel.data[r][c], cur = this.getCell(r, c).state;
+                if (exp === 1 && cur !== 1) cells.push({r, c, target: 1}); 
+                if (exp === 0 && cur === 1) cells.push({r, c, target: 2}); 
+            }
+        }
+        return cells;
+    }
+
+    checkWin() {
+        if (this.isEditorMode) return null;
+        const visitor = new WinCheckVisitor(this.currentLevel.data);
+        this.rootGroup.accept(visitor);
+        return { errors: visitor.errors, missing: visitor.missing };
+    }
+    getCurrentState() { const v = new ExtractStateVisitor(); this.rootGroup.accept(v); return v.getState(); }
+}
+
+/** ==========================================
+ * 2. ADAPTERS
+ * ========================================== */
+class StorageAdapter {
+    saveProgress(levelId, stateMatrix, timeSeconds, hintsLeft) { 
+        let all = this.getAllProgress();
+        all[levelId] = { stateMatrix, timeSeconds, hintsLeft };
+        localStorage.setItem('jcross_all_progress', JSON.stringify(all)); 
+    }
+    getAllProgress() { const r = localStorage.getItem('jcross_all_progress'); return r ? JSON.parse(r) : {}; }
+    loadProgress(levelId) { return this.getAllProgress()[levelId] || null; }
+    clearProgress(levelId) { 
+        let all = this.getAllProgress();
+        delete all[levelId];
+        localStorage.setItem('jcross_all_progress', JSON.stringify(all));
+    }
+
+    setLastPlayed(levelId) { localStorage.setItem('jcross_last_played', levelId); }
+    getLastPlayed() { return localStorage.getItem('jcross_last_played'); }
+
+    saveCustomLevels(levels) { localStorage.setItem('jcross_custom', JSON.stringify(levels)); }
+    loadCustomLevels() { const r = localStorage.getItem('jcross_custom'); return r ? JSON.parse(r) : []; }
+    
+    getBestTimes() { const r = localStorage.getItem('jcross_best_times'); return r ? JSON.parse(r) : {}; }
+    getBestTime(levelId) { return this.getBestTimes()[levelId] || null; }
+    saveBestTime(levelId, timeSeconds) {
+        const times = this.getBestTimes(); times[levelId] = timeSeconds;
+        localStorage.setItem('jcross_best_times', JSON.stringify(times));
     }
 }
 
-// ==========================================
-// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И ДАННЫЕ ИГРЫ
-// ==========================================
-let currentLevelData = [];
-let size = 0;
-let rootBoardGroup = new GridGroup();
-let commandManager = new CommandManager();
-
-const levels = [
-    {
-        size: 5,
-        data: [
-            [0,1,0,1,0],
-            [0,1,0,1,0],
-            [0,0,0,0,0],
-            [1,0,0,0,1],
-            [0,1,1,1,0]
-        ]
-    },
-    {
-        size: 10,
-        data: [
-            [0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,1,1,0,0,0,0],
-            [0,0,0,1,1,0,1,0,0,0],
-            [0,0,1,1,1,1,1,0,0,0],
-            [0,0,0,0,1,1,0,0,0,0],
-            [0,0,1,1,1,1,1,1,0,0],
-            [0,1,1,1,1,1,1,1,1,0],
-            [0,1,1,1,1,1,1,1,1,0],
-            [0,0,1,1,1,1,1,1,0,0],
-            [0,0,0,1,1,1,1,0,0,0]
-        ]
+class FileAdapter {
+    exportToJSON(levelsArray) {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(levelsArray));
+        const a = document.createElement('a'); a.href = dataStr; a.download = "custom_levels.json";
+        document.body.appendChild(a); a.click(); a.remove();
     }
-];
-
-function loadLevel() {
-    let sel = document.getElementById("levelSelect");
-    let lvl = levels[sel.value];
-    size = lvl.size;
-    currentLevelData = lvl.data;
-    
-    commandManager.clear();
-    rootBoardGroup = new GridGroup();
-    
-    for(let i=0; i<size; i++) {
-        let rowGroup = new GridGroup();
-        for(let j=0; j<size; j++) rowGroup.add(new Cell(i, j));
-        rootBoardGroup.add(rowGroup);
+    importFromJSON(file, callback) {
+        const reader = new FileReader();
+        reader.onload = e => { try { callback(JSON.parse(e.target.result)); } catch { alert("Ошибка парсинга JSON"); } };
+        reader.readAsText(file);
     }
-
-    document.getElementById("message").innerText = "";
-    drawGrid(); 
 }
 
-function drawGrid() {
-    const container = document.getElementById("gameContainer");
-    container.innerHTML = '';
-    
-    const grid = document.createElement('div');
-    grid.className = 'grid-container';
-    grid.style.gridTemplateColumns = `90px repeat(${size}, 40px)`;
-    grid.style.gridTemplateRows = `70px repeat(${size}, 40px)`;
+class DOMAdapter {
+    constructor(controller) {
+        this.ctrl = controller;
+        this.container = document.getElementById("gameContainer");
+        this.msg = document.getElementById("message");
+        this.timerDisp = document.getElementById("timerDisplay");
+        this.bestTimeDisp = document.getElementById("bestTimeDisplay");
+        this.delBtn = document.getElementById("deleteLvlBtn");
+        this.hintBtn = document.getElementById("hintBtn");
+        this.topCluesDOM = []; this.leftCluesDOM = [];
 
-    const corner = document.createElement('div');
-    corner.className = 'grid-cell corner-cell';
-    grid.appendChild(corner);
-    
-    let topClues = [];
-    for(let j=0; j<size; j++) {
-        let col = []; let count = 0;
-        for(let i=0; i<size; i++) {
-            if(currentLevelData[i][j] === 1) count++;
-            else if(count > 0) { col.push(count); count = 0; }
-        }
-        if(count > 0) col.push(count);
-        if(col.length === 0) col.push(0);
-        topClues.push(col);
+        document.addEventListener('mouseup', () => this.ctrl.handleGlobalMouseUp());
+        document.addEventListener('mouseleave', () => this.ctrl.handleGlobalMouseUp());
+        document.addEventListener('dragstart', e => e.preventDefault());
+        this.bindEvents();
     }
-    
-    for(let j=0; j<size; j++) {
-        const clueDiv = document.createElement('div');
-        clueDiv.className = 'grid-cell top-clue';
-        clueDiv.innerHTML = topClues[j].join('<br>');
-        grid.appendChild(clueDiv);
+
+    bindEvents() {
+        document.getElementById("levelSelect").addEventListener("change", e => {
+            this.delBtn.disabled = e.target.value.startsWith("lvl_"); 
+            this.ctrl.onLevelChange(e.target.value);
+        });
+        
+        document.getElementById("checkBtn").addEventListener("click", () => this.ctrl.onCheckWin());
+        document.getElementById("resetBtn").addEventListener("click", () => this.ctrl.onResetLevel());
+        document.getElementById("deleteLvlBtn").addEventListener("click", () => this.ctrl.deleteCurrentLevel());
+        document.getElementById("saveProgressBtn").addEventListener("click", () => this.ctrl.forceSaveProgress());
+        this.hintBtn.addEventListener("click", () => this.ctrl.useHint());
+
+        document.getElementById("toggleEditorBtn").addEventListener("click", () => this.ctrl.toggleEditorMode());
+        document.getElementById("exitEditorBtn").addEventListener("click", () => this.ctrl.toggleEditorMode());
+        document.getElementById("createBlankBtn").addEventListener("click", () => this.ctrl.initEditorGrid(parseInt(document.getElementById("editorSize").value)));
+        document.getElementById("saveCustomLvlBtn").addEventListener("click", () => this.ctrl.saveLevelFromEditor(document.getElementById("customLevelName").value));
+        document.getElementById("exportJsonBtn").addEventListener("click", () => this.ctrl.exportJSON());
+        document.getElementById("importJsonFile").addEventListener("change", e => { if(e.target.files.length) this.ctrl.importJSON(e.target.files[0]); });
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            if (e.ctrlKey && (e.key === 'z' || e.key === 'я')) { e.preventDefault(); this.ctrl.onUndo(); }
+            if (e.ctrlKey && (e.key === 'y' || e.key === 'н' || (e.shiftKey && (e.key === 'Z' || e.key === 'Я')))) { e.preventDefault(); this.ctrl.onRedo(); }
+        });
     }
-    
-    for(let i=0; i<size; i++) {
-        let rowClues = []; let count = 0;
-        for(let j=0; j<size; j++) {
-            if(currentLevelData[i][j] === 1) count++;
-            else if(count > 0) { rowClues.push(count); count = 0; }
+
+    updateHintBtn(hintsLeft, isWon) {
+        this.hintBtn.innerText = `💡 Подсказки: ${hintsLeft}`;
+        this.hintBtn.disabled = hintsLeft <= 0 || isWon;
+    }
+
+    populateLevelSelect(defLvl, custLvl, selId) {
+        const sel = document.getElementById("levelSelect"); sel.innerHTML = "";
+        defLvl.forEach(l => sel.add(new Option(`Стандарт: ${l.name}`, l.id)));
+        custLvl.forEach(l => sel.add(new Option(`Кастом: ${l.name}`, l.id)));
+        sel.value = selId;
+        this.delBtn.disabled = selId.startsWith("lvl_"); 
+    }
+
+    formatTime(sec) { return `${Math.floor(sec/60).toString().padStart(2,'0')}:${(sec%60).toString().padStart(2,'0')}`; }
+    renderTimer(sec) { this.timerDisp.innerText = `Время: ${this.formatTime(sec)}`; }
+    renderBestTime(sec) { this.bestTimeDisp.innerText = sec === null ? "Лучшее: --:--" : `Лучшее: ${this.formatTime(sec)}`; }
+    showMessage(text, color) { this.msg.innerText = text; this.msg.style.color = color; }
+
+    // Функция для определения блоков закрашенных клеток и их позиций
+    _getBlocks(line) {
+        let blocks = []; let count = 0; let start = -1;
+        for(let i=0; i<line.length; i++) {
+            if(line[i] === 1) {
+                if(count === 0) start = i;
+                count++;
+            } else if(count > 0) {
+                blocks.push({len: count, start: start, end: i-1}); count = 0;
+            }
         }
-        if(count > 0) rowClues.push(count);
-        if(rowClues.length === 0) rowClues.push(0);
-        
-        const leftDiv = document.createElement('div');
-        leftDiv.className = 'grid-cell left-clue';
-        leftDiv.textContent = rowClues.join(' ');
-        grid.appendChild(leftDiv);
-        
-        const rowGroup = rootBoardGroup.children[i];
-        for(let j=0; j<size; j++) {
-            const cellDom = document.createElement('div');
-            cellDom.className = `grid-cell play-cell cell-empty`;
+        if(count > 0) blocks.push({len: count, start: start, end: line.length-1});
+        return blocks;
+    }
+
+    renderGrid(core) {
+        this.container.innerHTML = ''; this.topCluesDOM = []; this.leftCluesDOM = [];
+        const size = core.size; const grid = document.createElement('div');
+        grid.className = 'grid-container';
+        grid.style.gridTemplateColumns = core.isEditorMode ? `repeat(${size}, 40px)` : `90px repeat(${size}, 40px)`;
+        grid.style.gridTemplateRows = core.isEditorMode ? `repeat(${size}, 40px)` : `70px repeat(${size}, 40px)`;
+        grid.addEventListener('contextmenu', e => e.preventDefault());
+
+        if (!core.isEditorMode) {
+            grid.appendChild(Object.assign(document.createElement('div'), {className: 'grid-cell corner-cell'}));
             
-            const logicalCell = rowGroup.children[j];
-            logicalCell.domElement = cellDom;
-            logicalCell.updateDOM(); 
-            
-            cellDom.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                const clearVisitor = new ClearErrorsVisitor();
-                rootBoardGroup.accept(clearVisitor);
-                document.getElementById("message").innerText = "";
+            // ВЕРХНИЕ ПОДСКАЗКИ
+            for(let j=0; j<size; j++) {
+                let colData = []; for(let i=0; i<size; i++) colData.push(core.currentLevel.data[i][j]);
+                let blocks = this._getBlocks(colData);
                 
-                const command = new ToggleCellCommand(logicalCell, e.button);
-                commandManager.executeCommand(command);
-            });
+                const clueDiv = document.createElement('div'); 
+                clueDiv.className = 'grid-cell top-clue';
+                clueDiv.style.flexDirection = 'column'; 
+                clueDiv.style.justifyContent = 'flex-end'; 
+                
+                let spans = [];
+                if (blocks.length === 0) {
+                    clueDiv.innerHTML = "<span>0</span>"; 
+                    spans.push(clueDiv.firstChild);
+                } else {
+                    blocks.forEach(b => {
+                        let span = document.createElement('span'); 
+                        span.innerText = b.len;
+                        clueDiv.appendChild(span); 
+                        spans.push(span);
+                    });
+                }
+                grid.appendChild(clueDiv); 
+                this.topCluesDOM.push({ el: clueDiv, spans: spans, expectedBlocks: blocks });
+            }
             
-            cellDom.addEventListener('contextmenu', (e) => e.preventDefault());
-            grid.appendChild(cellDom);
+            // ЛЕВЫЕ ПОДСКАЗКИ
+            for(let i=0; i<size; i++) {
+                let rowData = core.currentLevel.data[i];
+                let blocks = this._getBlocks(rowData);
+                
+                const leftDiv = document.createElement('div'); 
+                leftDiv.className = 'grid-cell left-clue';
+                
+                let spans = [];
+                if (blocks.length === 0) {
+                    leftDiv.innerHTML = "<span>0</span>"; 
+                    spans.push(leftDiv.firstChild);
+                } else {
+                    blocks.forEach((b, idx) => {
+                        let span = document.createElement('span'); 
+                        span.innerText = b.len;
+                        if(idx < blocks.length - 1) span.style.marginRight = '6px'; 
+                        leftDiv.appendChild(span); 
+                        spans.push(span);
+                    });
+                }
+                grid.appendChild(leftDiv); 
+                this.leftCluesDOM.push({ el: leftDiv, spans: spans, expectedBlocks: blocks });
+                
+                this.renderRow(grid, core, i);
+            }
+        } else { 
+            for(let i=0; i<size; i++) this.renderRow(grid, core, i); 
+        }
+        this.container.appendChild(grid); 
+        this.updateClues(core);
+    }
+
+    renderRow(gridDOM, core, r) {
+        for(let c=0; c<core.size; c++) {
+            const cellDom = document.createElement('div');
+            cellDom.dataset.r = r; cellDom.dataset.c = c; gridDOM.appendChild(cellDom);
+            cellDom.addEventListener('mousedown', e => { e.preventDefault(); this.clearErrors(); this.ctrl.handleMouseDown(r, c, e.button); });
+            cellDom.addEventListener('mouseenter', e => this.ctrl.handleDragToCell(r, c));
+            this.updateCellDOM(r, c, core.getCell(r, c).state, core.isEditorMode, cellDom);
         }
     }
-    container.appendChild(grid);
-}
 
-function checkWin() {
-    const clearVisitor = new ClearErrorsVisitor();
-    rootBoardGroup.accept(clearVisitor);
+    updateCellDOM(r, c, state, isEditor, element = null) {
+        let el = element || this.container.querySelector(`[data-r="${r}"][data-c="${c}"]`);
+        if(!el) return;
+        el.className = 'grid-cell play-cell'; el.innerText = '';
+        if (state === 1) el.classList.add(isEditor ? 'cell-editor-draw' : 'cell-black');
+        else if (state === 2 && !isEditor) { el.classList.add('cell-crossed'); el.innerText = '✕'; }
+    }
+
+    fullUpdateCells(core) { for(let r=0; r<core.size; r++) for(let c=0; c<core.size; c++) this.updateCellDOM(r, c, core.getCell(r, c).state, core.isEditorMode); }
     
-    const checkVisitor = new WinCheckVisitor(currentLevelData);
-    rootBoardGroup.accept(checkVisitor);
-    
-    const msg = document.getElementById("message");
-    
-    if (checkVisitor.extraBlacks > 0) {
-        msg.innerText = `Найдено ${checkVisitor.extraBlacks} лишних клеток. Исправьте подсвеченные ошибки.`;
-        msg.style.color = "#c62828";
-    } else if (checkVisitor.missingBlacks > 0) {
-        msg.innerText = "Ошибок нет, но кроссворд ещё не разгадан до конца!";
-        msg.style.color = "#1e3c72";
-    } else {
-        msg.innerText = "Поздравляю! Вы полностью разгадали кроссворд!";
-        msg.style.color = "#2e7d32";
+    // Новая логика: независимое зачеркивание каждой цифры-подсказки
+    updateClues(core) {
+        if(core.isEditorMode) return;
+        let state = core.getCurrentState();
+
+        // Проверка столбцов (Верхние подсказки)
+        for(let j=0; j<core.size; j++) {
+            let clueData = this.topCluesDOM[j];
+            let colState = []; for(let i=0; i<core.size; i++) colState.push(state[i][j]);
+            
+            if (clueData.expectedBlocks.length === 0) {
+                let hasErrors = colState.includes(1);
+                clueData.spans[0].classList.toggle('clue-done', !hasErrors);
+            } else {
+                clueData.expectedBlocks.forEach((block, idx) => {
+                    let isDone = true;
+                    // Проверяем, закрашены ли все нужные клетки для данного блока
+                    for(let i=block.start; i<=block.end; i++) { if(colState[i] !== 1) isDone = false; }
+                    // Убеждаемся, что границы не сливаются с соседними нарисованными клетками
+                    if (block.start > 0 && colState[block.start - 1] === 1) isDone = false;
+                    if (block.end < core.size - 1 && colState[block.end + 1] === 1) isDone = false;
+                    
+                    clueData.spans[idx].classList.toggle('clue-done', isDone);
+                });
+            }
+        }
+        
+        // Проверка строк (Левые подсказки)
+        for(let i=0; i<core.size; i++) {
+            let clueData = this.leftCluesDOM[i];
+            let rowState = state[i];
+            
+            if (clueData.expectedBlocks.length === 0) {
+                let hasErrors = rowState.includes(1);
+                clueData.spans[0].classList.toggle('clue-done', !hasErrors);
+            } else {
+                clueData.expectedBlocks.forEach((block, idx) => {
+                    let isDone = true;
+                    for(let c=block.start; c<=block.end; c++) { if(rowState[c] !== 1) isDone = false; }
+                    if (block.start > 0 && rowState[block.start - 1] === 1) isDone = false;
+                    if (block.end < core.size - 1 && rowState[block.end + 1] === 1) isDone = false;
+                    
+                    clueData.spans[idx].classList.toggle('clue-done', isDone);
+                });
+            }
+        }
+    }
+
+    clearErrors() { 
+        document.querySelectorAll('.cell-error').forEach(el => el.classList.remove('cell-error')); 
+        document.querySelectorAll('.cell-hinted').forEach(el => el.classList.remove('cell-hinted')); 
+        this.msg.innerText = ""; 
+    }
+    showErrors(arr) { arr.forEach(err => { let el = this.container.querySelector(`[data-r="${err.row}"][data-c="${err.col}"]`); if(el) el.classList.add('cell-error'); }); }
+    highlightHint(r, c) { let el = this.container.querySelector(`[data-r="${r}"][data-c="${c}"]`); if(el) { el.classList.add('cell-hinted'); setTimeout(() => el.classList.remove('cell-hinted'), 1500); } }
+
+    toggleEditorUI(isEd) {
+        document.getElementById('playControls').style.display = isEd ? 'none' : 'flex';
+        document.getElementById('bottomControls').style.display = isEd ? 'none' : 'flex';
+        document.getElementById('footerPanel').style.display = isEd ? 'none' : 'flex';
+        document.getElementById('editorControls').style.display = isEd ? 'flex' : 'none';
+        this.msg.innerText = isEd ? "Редактор: Левая кнопка - рисовать, Правая кнопка - ластик" : "";
     }
 }
 
-function resetLevel() { loadLevel(); }
-window.onload = function() { loadLevel(); }
+/** ==========================================
+ * 3. CONTROLLER
+ * ========================================== */
+class GameController {
+    constructor() {
+        this.core = new GameCore(); this.storage = new StorageAdapter(); this.fileManager = new FileAdapter(); this.ui = new DOMAdapter(this);
+        
+        this.defaultLevels = [
+            { id: "lvl_0", name: "Смайлик (5x5)", size: 5, data: [ [0,1,0,1,0], [0,1,0,1,0], [0,0,0,0,0], [1,0,0,0,1], [0,1,1,1,0] ]},
+            { id: "lvl_2", name: "Сердечко (5x5)", size: 5, data: [ [0,1,0,1,0], [1,1,1,1,1], [1,1,1,1,1], [0,1,1,1,0], [0,0,1,0,0] ]},
+            { id: "lvl_3", name: "Домик (5x5)", size: 5, data: [ [0,0,1,0,0], [0,1,1,1,0], [1,1,1,1,1], [0,1,0,1,0], [0,1,1,1,0] ]},
+            { id: "lvl_1", name: "Уточка (10x10)", size: 10, data: [ [0,0,0,0,0,0,0,0,0,0], [0,0,0,0,1,1,0,0,0,0], [0,0,0,1,1,0,1,0,0,0], [0,0,1,1,1,1,1,0,0,0], [0,0,0,0,1,1,0,0,0,0], [0,0,1,1,1,1,1,1,0,0], [0,1,1,1,1,1,1,1,1,0], [0,1,1,1,1,1,1,1,1,0], [0,0,1,1,1,1,1,1,0,0], [0,0,0,1,1,1,1,0,0,0] ]},
+            { id: "lvl_4", name: "Яблоко (10x10)", size: 10, data: [ [0,0,0,0,1,0,0,0,0,0], [0,0,0,0,1,1,0,0,0,0], [0,0,1,1,1,1,1,0,0,0], [0,1,1,1,1,1,1,1,0,0], [0,1,1,1,1,1,1,1,0,0], [0,1,1,1,1,1,1,1,0,0], [0,1,1,1,1,1,1,1,0,0], [0,0,1,1,1,1,1,0,0,0], [0,0,0,1,1,1,0,0,0,0], [0,0,0,0,0,0,0,0,0,0] ]},
+            { id: "lvl_5", name: "Грибок (10x10)", size: 10, data: [ [0,0,0,1,1,1,1,0,0,0], [0,0,1,1,1,1,1,1,0,0], [0,1,1,1,1,1,1,1,1,0], [1,1,1,1,1,1,1,1,1,1], [0,0,0,0,1,1,0,0,0,0], [0,0,0,0,1,1,0,0,0,0], [0,0,0,0,1,1,0,0,0,0], [0,0,0,1,1,1,1,0,0,0], [0,0,0,1,1,1,1,0,0,0], [0,0,0,0,0,0,0,0,0,0] ]},
+            { id: "lvl_6", name: "Кораблик (15x15)", size: 15, data: [ [0,0,0,0,0,0,0,1,0,0,0,0,0,0,0], [0,0,0,0,0,0,1,1,0,0,0,0,0,0,0], [0,0,0,0,0,1,1,1,0,0,0,0,0,0,0], [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0], [0,0,0,1,1,1,1,1,0,0,0,0,0,0,0], [0,0,1,1,1,1,1,1,0,0,0,1,0,0,0], [0,1,1,1,1,1,1,1,0,0,1,1,0,0,0], [1,1,1,1,1,1,1,1,0,1,1,1,0,0,0], [0,0,0,0,0,0,0,1,1,1,1,1,0,0,0], [0,0,0,0,0,0,0,1,1,1,1,1,0,0,0], [0,0,0,0,0,0,0,1,0,0,0,0,0,0,0], [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], [0,1,1,1,1,1,1,1,1,1,1,1,1,1,0], [0,0,1,1,1,1,1,1,1,1,1,1,1,0,0], [0,0,0,1,1,1,1,1,1,1,1,1,0,0,0] ]}
+        ];
+        this.customLevels = this.storage.loadCustomLevels(); 
+        this.timerId = null;
+        this.hintsLeft = 3;
+        
+        this.isDragging = false; this.dragTargetState = null; this.currentMacro = null;
+        this.initGame();
+    }
+
+    getAllLevels() { return [...this.defaultLevels, ...this.customLevels]; }
+    getLevelById(id) { return this.getAllLevels().find(l => l.id === id); }
+
+    initGame() {
+        let lastPlayed = this.storage.getLastPlayed();
+        let startId = this.getLevelById(lastPlayed) ? lastPlayed : this.defaultLevels[0].id;
+        
+        this.ui.populateLevelSelect(this.defaultLevels, this.customLevels, startId);
+        this.loadLevelCore(startId);
+    }
+
+    loadLevelCore(id) {
+        this.storage.setLastPlayed(id);
+        const savedData = this.storage.loadProgress(id);
+        
+        let state = savedData ? savedData.stateMatrix : null;
+        let time = savedData ? savedData.timeSeconds : 0;
+        this.hintsLeft = savedData && savedData.hintsLeft !== undefined ? savedData.hintsLeft : 3;
+
+        this.core.loadLevel(this.getLevelById(id), state, time);
+        
+        this.ui.renderGrid(this.core); 
+        this.ui.updateHintBtn(this.hintsLeft, false);
+        this.ui.showMessage("", "");
+        
+        const bestTime = this.storage.getBestTime(id);
+        this.ui.renderBestTime(bestTime);
+        this.startTimer();
+    }
+
+    onLevelChange(id) { 
+        if(!this.core.isWon && !this.core.isEditorMode) this.autoSave(); 
+        this.loadLevelCore(id); 
+    }
+    
+    onResetLevel() { 
+        const msg = this.core.isWon 
+            ? "Вы уже решили этот кроссворд! Точно хотите очистить поле и пройти его заново?" 
+            : "Очистить поле и начать заново?";
+
+        if(confirm(msg)) {
+            this.storage.clearProgress(this.core.currentLevel.id); 
+            this.loadLevelCore(this.core.currentLevel.id); 
+        }
+    }
+
+    forceSaveProgress() {
+        if (this.core.isWon || this.core.isEditorMode) return;
+        this.autoSave();
+        this.ui.showMessage("Прогресс успешно сохранен!", "#0288d1");
+        setTimeout(() => { if(this.ui.msg.innerText === "Прогресс успешно сохранен!") this.ui.msg.innerText = ""; }, 2000);
+    }
+
+    autoSave() { this.storage.saveProgress(this.core.currentLevel.id, this.core.getCurrentState(), this.core.timeSeconds, this.hintsLeft); }
+
+    useHint() {
+        if (this.hintsLeft <= 0 || this.core.isWon || this.core.isEditorMode) return;
+        const hintable = this.core.getHintableCells();
+        if (hintable.length === 0) return; 
+
+        const target = hintable[Math.floor(Math.random() * hintable.length)];
+        const cell = this.core.getCell(target.r, target.c);
+        const cmd = new SetCellStateCommand(cell, target.target);
+        cmd.execute();
+        this.core.cmdManager.pushMacro(new MacroCommand().add(cmd));
+
+        this.hintsLeft--;
+        this.ui.updateHintBtn(this.hintsLeft, this.core.isWon);
+        this.ui.highlightHint(target.r, target.c);
+        this.afterUndoRedo();
+    }
+
+    deleteCurrentLevel() {
+        const id = document.getElementById("levelSelect").value;
+        if (id.startsWith("lvl_")) return; 
+        if (!confirm("Вы уверены, что хотите удалить этот уровень?")) return;
+        this.customLevels = this.customLevels.filter(l => l.id !== id);
+        this.storage.saveCustomLevels(this.customLevels);
+        this.storage.clearProgress(id);
+        this.initGame();
+    }
+
+    handleMouseDown(r, c, btn) {
+        if (this.core.isWon) return;
+        this.isDragging = true; this.currentMacro = new MacroCommand();
+        const cell = this.core.getCell(r, c);
+        
+        if (this.core.isEditorMode) {
+            if (btn === 0) this.dragTargetState = (cell.state === 1) ? 0 : 1;
+            else if (btn === 2) this.dragTargetState = 0;
+            else this.dragTargetState = cell.state;
+        } else {
+            if (btn === 0) this.dragTargetState = (cell.state === 1) ? 0 : 1;
+            else if (btn === 2) this.dragTargetState = (cell.state === 2) ? 0 : 2;
+            else this.dragTargetState = cell.state;
+        }
+        this.handleDragToCell(r, c);
+    }
+
+    handleDragToCell(r, c) {
+        if (!this.isDragging || this.core.isWon) return;
+        const cell = this.core.getCell(r, c);
+        if (cell.state !== this.dragTargetState) {
+            const cmd = new SetCellStateCommand(cell, this.dragTargetState);
+            cmd.execute(); this.currentMacro.add(cmd);
+            this.ui.updateCellDOM(r, c, cell.state, this.core.isEditorMode);
+            this.ui.updateClues(this.core);
+        }
+    }
+
+    handleGlobalMouseUp() {
+        if (this.isDragging) {
+            this.isDragging = false;
+            if (this.currentMacro && this.currentMacro.commands.length > 0) {
+                this.core.cmdManager.pushMacro(this.currentMacro);
+                this.afterUndoRedo(); 
+            }
+            this.currentMacro = null;
+        }
+    }
+
+    onUndo() { if(!this.core.isWon) { this.core.cmdManager.undo(); this.afterUndoRedo(); } }
+    onRedo() { if(!this.core.isWon) { this.core.cmdManager.redo(); this.afterUndoRedo(); } }
+
+    afterUndoRedo() {
+        this.ui.clearErrors(); this.ui.fullUpdateCells(this.core); this.ui.updateClues(this.core);
+        if(!this.core.isEditorMode && !this.core.isWon) {
+            this.autoSave();
+            const check = this.core.checkWin();
+            if (check.missing === 0 && check.errors.length === 0) this.onCheckWin();
+        }
+    }
+
+    onCheckWin() {
+        const result = this.core.checkWin();
+        if (result.errors.length > 0) {
+            this.ui.showErrors(result.errors); this.ui.showMessage(`Ошибок: ${result.errors.length}. Исправьте подсвеченные клетки.`, "#c62828");
+        } else if (result.missing > 0) {
+            this.ui.showMessage("Ошибок нет, но кроссворд ещё не закончен!", "#1e3c72");
+        } else {
+            this.core.isWon = true; 
+            this.stopTimer(); 
+            this.storage.clearProgress(this.core.currentLevel.id); 
+            this.ui.updateHintBtn(this.hintsLeft, true);
+
+            const oldBest = this.storage.getBestTime(this.core.currentLevel.id);
+            if (oldBest === null || this.core.timeSeconds < oldBest) {
+                this.storage.saveBestTime(this.core.currentLevel.id, this.core.timeSeconds);
+                this.ui.renderBestTime(this.core.timeSeconds);
+                this.ui.showMessage(`Победа! НОВЫЙ РЕКОРД: ${this.ui.formatTime(this.core.timeSeconds)} 🎉`, "#2e7d32");
+            } else {
+                this.ui.showMessage(`Победа! Ваше время: ${this.ui.formatTime(this.core.timeSeconds)}.`, "#2e7d32");
+            }
+        }
+    }
+
+    startTimer() {
+        this.stopTimer(); this.ui.renderTimer(this.core.timeSeconds);
+        this.timerId = setInterval(() => {
+            if(!this.core.isWon) {
+                this.core.timeSeconds++; this.ui.renderTimer(this.core.timeSeconds);
+                if(this.core.timeSeconds % 5 === 0) this.autoSave();
+            }
+        }, 1000);
+    }
+    stopTimer() { if (this.timerId) clearInterval(this.timerId); }
+
+    toggleEditorMode() {
+        if (!this.core.isEditorMode) { 
+            this.autoSave();
+            this.stopTimer(); this.ui.toggleEditorUI(true); this.initEditorGrid(5); 
+        } else { 
+            this.ui.toggleEditorUI(false); 
+            this.initGame(); 
+        }
+    }
+    
+    initEditorGrid(size) { this.core.initEditor(size); this.ui.renderGrid(this.core); }
+    
+    saveLevelFromEditor(name) {
+        if(!name.trim()) return alert("Введите название уровня!");
+        const cleanData = this.core.getCurrentState().map(r => r.map(c => c === 1 ? 1 : 0));
+        
+        const newId = "custom_" + Date.now();
+        this.customLevels.push({ id: newId, name: name.trim(), size: this.core.size, data: cleanData });
+        this.storage.saveCustomLevels(this.customLevels);
+        
+        alert("Уровень сохранен!"); 
+        
+        this.storage.setLastPlayed(newId);
+        this.toggleEditorMode();
+    }
+    
+    exportJSON() { if(!this.customLevels.length) return alert("У вас нет кастомных уровней."); this.fileManager.exportToJSON(this.customLevels); }
+    
+    importJSON(file) {
+        this.fileManager.importFromJSON(file, importedLevels => {
+            if(!Array.isArray(importedLevels)) return alert("Ошибка: Файл должен содержать массив уровней.");
+            const valid = [];
+            for(let l of importedLevels) {
+                if(!l.id || !l.name || typeof l.size !== 'number' || !Array.isArray(l.data) || l.data.length !== l.size) continue;
+                let isMatrixValid = true;
+                for(let row of l.data) {
+                    if(!Array.isArray(row) || row.length !== l.size) { isMatrixValid = false; break; }
+                    for(let cell of row) if(cell !== 0 && cell !== 1) { isMatrixValid = false; break; }
+                }
+                if(isMatrixValid) valid.push(l);
+            }
+            if(valid.length === 0) return alert("В файле нет корректных уровней!");
+            this.customLevels = [...this.customLevels, ...valid];
+            this.storage.saveCustomLevels(this.customLevels);
+            this.ui.populateLevelSelect(this.defaultLevels, this.customLevels, this.core.currentLevel.id);
+            alert(`Успешно импортировано уровней: ${valid.length}`);
+        });
+    }
+}
+
+window.onload = () => window.gameApp = new GameController();
 </script>
 </body>
 </html>
